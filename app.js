@@ -2,6 +2,14 @@
 let page = "home";
 let edit = false;
 
+const isAdmin = new URLSearchParams(location.search).get("admin") === "1";
+
+if(isAdmin){
+  document.addEventListener("DOMContentLoaded",()=>{
+    document.getElementById("editBtn").classList.remove("hidden");
+  });
+}
+
 let title = localStorage.getItem("title") || "Мой сайт";
 let text = localStorage.getItem("text") || "Привет!";
 let images = JSON.parse(localStorage.getItem("images") || "[]");
