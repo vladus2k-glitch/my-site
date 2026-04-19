@@ -2,7 +2,7 @@
 let page = "home";
 let edit = false;
 
-const isAdmin = new URLSearchParams(location.search).get("admin") === "1";
+const isAdmin = new URLSearchParams(location.search).get("admin") === "pevn86k";
 
 if(isAdmin){
   document.addEventListener("DOMContentLoaded",()=>{
