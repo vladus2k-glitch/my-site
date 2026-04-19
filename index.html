@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Мой сайт</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+  <div class="menu">
+    <button onclick="setPage('home')">Главная</button>
+    <button onclick="setPage('gallery')">Галерея</button>
+    <button onclick="setPage('about')">О сайте</button>
+  </div>
+
+  <div id="content"></div>
+
+  <div id="editPanel" class="hidden">
+    <input id="titleInput" placeholder="Заголовок"><br>
+    <textarea id="textInput" placeholder="Текст"></textarea><br>
+    <input id="imgInput" placeholder="Ссылка на картинку">
+    <button onclick="addImage()">Добавить картинку</button><br>
+    <button onclick="save()">Сохранить</button>
+  </div>
+
+  <button onclick="toggleEdit()">Редактировать</button>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
