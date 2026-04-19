@@ -1,33 +1,15 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Мой сайт</title>
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
+<button id="editBtn" style="position:fixed;top:10px;left:10px;display:none;" onclick="toggleEdit()">Редактировать</button>
 
-<div class="container">
-  <div class="menu">
-    <button onclick="setPage('home')">Главная</button>
-    <button onclick="setPage('gallery')">Галерея</button>
-    <button onclick="setPage('about')">О сайте</button>
-  </div>
+<div id="menu"></div>
+<div id="content"></div>
 
-  <div id="content"></div>
+<div id="editPanel" style="display:none;position:fixed;right:10px;top:60px;background:white;padding:10px;">
+<input id="pageName" placeholder="Новая вкладка">
+<button onclick="addPage()">Создать</button>
 
-  <div id="editPanel" class="hidden">
-    <input id="titleInput" placeholder="Заголовок"><br>
-    <textarea id="textInput" placeholder="Текст"></textarea><br>
-    <input id="imgInput" placeholder="Ссылка на картинку">
-    <button onclick="addImage()">Добавить картинку</button><br>
-    <button onclick="save()">Сохранить</button>
-  </div>
+<input id="bgInput" placeholder="Цвет фона">
+<button onclick="setBackground()">Фон</button>
 
-  <button id="editBtn" class="hidden" onclick="toggleEdit()">Редактировать</button>
+<textarea id="textInput"></textarea>
+<button onclick="save()">Сохранить</button>
 </div>
-
-<script src="app.js"></script>
-</body>
-</html>
