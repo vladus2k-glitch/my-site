@@ -37,29 +37,35 @@ display:none;
 z-index:999;
 }
 
-#panel button,
-#panel input{
+#panel button,#panel input{
 width:100%;
 margin-bottom:10px;
 }
 
 #canvas{
-margin-left:0;
 min-height:100vh;
 position:relative;
-}
-
-.editing #canvas{
-margin-left:220px;
 }
 
 .box{
 position:absolute;
 cursor:move;
+user-select:none;
 }
 
 .selected{
-outline:2px dashed blue;
+outline:2px dashed #4da3ff;
+}
+
+/* resize handle */
+.handle{
+width:10px;
+height:10px;
+background:#4da3ff;
+position:absolute;
+right:-5px;
+bottom:-5px;
+cursor:se-resize;
 }
 </style>
 </head>
@@ -89,33 +95,30 @@ const canvas=document.getElementById("canvas");
 const addText=document.getElementById("addText");
 const imgUpload=document.getElementById("imgUpload");
 const bgColor=document.getElementById("bgColor");
-const deleteBtn=document.getElementById("delete");
+const del=document.getElementById("delete");
 
 let selected=null;
-let editing=false;
 
 if(isAdmin){
 editBtn.style.display="block";
 }
 
 editBtn.onclick=()=>{
-editing=!editing;
-
-panel.style.display=editing?"block":"none";
-document.body.classList.toggle("editing");
+panel.style.display = panel.style.display==="block"?"none":"block";
 };
 
 addText.onclick=()=>{
-const div=document.createElement("div");
-div.className="box";
-div.contentEditable=true;
-div.innerText="Текст";
-div.style.left="100px";
-div.style.top="100px";
-div.style.fontSize="20px";
+const el=document.createElement("div");
+el.className="box";
+el.contentEditable=true;
+el.innerText="Текст";
+el.style.left="100px";
+el.style.top="100px";
+el.style.fontSize="20px";
 
-canvas.appendChild(div);
-make(div);
+addHandle(el);
+canvas.appendChild(el);
+make(el);
 save();
 };
 
@@ -125,22 +128,22 @@ if(!file)return;
 
 const reader=new FileReader();
 reader.onload=()=>{
-const img=document.createElement("img");
-img.src=reader.result;
-img.className="box";
-img.style.left="100px";
-img.style.top="100px";
-img.style.width="200px";
+const el=document.createElement("img");
+el.src=reader.result;
+el.className="box";
+el.style.left="100px";
+el.style.top="100px";
+el.style.width="200px";
 
-canvas.appendChild(img);
-make(img);
+addHandle(el);
+canvas.appendChild(el);
+make(el);
 save();
 };
-
 reader.readAsDataURL(file);
 };
 
-deleteBtn.onclick=()=>{
+del.onclick=()=>{
 if(selected){
 selected.remove();
 selected=null;
@@ -156,8 +159,7 @@ save();
 function make(el){
 drag(el);
 
-el.onclick=e=>{
-if(!editing) return;
+el.onclick=(e)=>{
 document.querySelectorAll(".box").forEach(b=>b.classList.remove("selected"));
 selected=el;
 el.classList.add("selected");
@@ -165,11 +167,12 @@ e.stopPropagation();
 };
 }
 
+// DRAG
 function drag(el){
 let down=false,ox,oy;
 
 el.onmousedown=e=>{
-if(!editing) return;
+if(e.target.classList.contains("handle")) return;
 down=true;
 ox=e.offsetX;
 oy=e.offsetY;
@@ -187,18 +190,58 @@ down=false;
 });
 }
 
+// RESIZE
+function addHandle(el){
+const h=document.createElement("div");
+h.className="handle";
+el.appendChild(h);
+
+let resizing=false,startX,startY,startW,startH;
+
+h.onmousedown=e=>{
+e.stopPropagation();
+resizing=true;
+
+startX=e.clientX;
+startY=e.clientY;
+
+startW=parseInt(getComputedStyle(el).width);
+startH=parseInt(getComputedStyle(el).height);
+
+document.onmousemove=ev=>{
+if(!resizing) return;
+
+el.style.width=(startW + (ev.clientX-startX))+"px";
+el.style.height=(startH + (ev.clientY-startY))+"px";
+};
+
+document.onmouseup=()=>{
+if(resizing) save();
+resizing=false;
+document.onmousemove=null;
+};
+};
+}
+
+// SAVE
 function save(){
 localStorage.setItem("site",canvas.innerHTML);
 localStorage.setItem("bg",document.body.style.background);
 }
 
+// LOAD
 window.onload=()=>{
 const saved=localStorage.getItem("site");
 const bg=localStorage.getItem("bg");
 
 if(saved){
 canvas.innerHTML=saved;
-document.querySelectorAll(".box").forEach(make);
+document.querySelectorAll(".box").forEach(el=>{
+make(el);
+const h=document.createElement("div");
+h.className="handle";
+el.appendChild(h);
+});
 }
 
 if(bg){
