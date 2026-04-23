@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini Figma Stable</title>
+<title>Simple Figma</title>
 
 <style>
 body{
@@ -16,7 +16,7 @@ overflow:hidden;
 position:fixed;
 left:0;
 top:0;
-width:200px;
+width:220px;
 height:100%;
 background:#1e1e1e;
 color:white;
@@ -29,7 +29,6 @@ padding:6px;
 margin:4px 0;
 background:#2a2a2a;
 cursor:pointer;
-font-size:14px;
 }
 
 .layer.active{
@@ -38,23 +37,24 @@ background:#4da3ff;
 
 #toolbar{
 position:fixed;
-top:10px;
-left:210px;
+top:0;
+left:220px;
+width:200px;
+height:100%;
 background:#111;
 padding:10px;
 color:white;
-display:none;
-z-index:1000;
+box-sizing:border-box;
 }
 
 button, input{
 width:100%;
-margin:5px 0;
+margin:6px 0;
 }
 
 #canvas{
-margin-left:200px;
-width:calc(100vw - 200px);
+margin-left:420px;
+width:calc(100vw - 420px);
 height:100vh;
 position:relative;
 background:#f5f5f5;
@@ -75,12 +75,11 @@ width:10px;
 height:10px;
 background:#4da3ff;
 position:absolute;
+right:-5px;
+bottom:-5px;
+cursor:se-resize;
 display:none;
 }
-.h-tl{top:-5px;left:-5px;cursor:nwse-resize;}
-.h-tr{top:-5px;right:-5px;cursor:nesw-resize;}
-.h-bl{bottom:-5px;left:-5px;cursor:nesw-resize;}
-.h-br{bottom:-5px;right:-5px;cursor:nwse-resize;}
 </style>
 </head>
 
@@ -89,87 +88,62 @@ display:none;
 <div id="layers"></div>
 
 <div id="toolbar">
-<button onclick="addText()">Text</button>
-<button onclick="addBox()">Box</button>
+<button onclick="addText()">➕ Текст</button>
+<button onclick="addImage()">🖼 Картинка</button>
+<button onclick="del()">🗑 Удалить</button>
 <input type="file" id="imgUpload">
-<button onclick="del()">Delete</button>
 </div>
 
 <div id="canvas"></div>
 
 <script>
-const ADMIN="123456";
-const isAdmin=new URLSearchParams(location.search).get("admin")===ADMIN;
-
 const canvas=document.getElementById("canvas");
 const layers=document.getElementById("layers");
-const toolbar=document.getElementById("toolbar");
 const imgUpload=document.getElementById("imgUpload");
 
+let objects=[];
 let selected=null;
 
-if(isAdmin){
-toolbar.style.display="block";
-}
-
-/* ===== DATA SYSTEM (ВАЖНО) ===== */
-let objects=[];
-
-/* CREATE OBJECT */
-function createObject(type,extra={}){
-return{
-id:Date.now()+Math.random(),
-type,
-x:100,
-y:100,
-w:120,
-h:80,
-text:"Text",
-src:"",
-...extra
-};
-}
-
-/* ADD TEXT */
+/* CREATE TEXT */
 function addText(){
-const obj=createObject("text",{text:"Text"});
-objects.push(obj);
+objects.push({
+id:Date.now()+Math.random(),
+type:"text",
+x:100,y:100,
+w:150,h:50,
+text:"Текст"
+});
 render();
 save();
 }
 
-/* ADD BOX */
-function addBox(){
-const obj=createObject("box",{w:120,h:120});
-objects.push(obj);
-render();
-save();
+/* CREATE IMAGE BUTTON */
+function addImage(){
+imgUpload.click();
 }
 
-/* ADD IMAGE */
+/* IMAGE LOAD */
 imgUpload.onchange=e=>{
 const file=e.target.files[0];
 if(!file)return;
 
 const reader=new FileReader();
 reader.onload=()=>{
-const obj=createObject("image",{
-src:reader.result,
-w:200,
-h:150
+objects.push({
+id:Date.now()+Math.random(),
+type:"image",
+x:100,y:100,
+w:200,h:150,
+src:reader.result
 });
-
-objects.push(obj);
 render();
 save();
 };
-
 reader.readAsDataURL(file);
 };
 
 /* DELETE */
 function del(){
-if(!selected)return;
 objects=objects.filter(o=>o.id!==selected);
 selected=null;
 render();
@@ -183,7 +157,7 @@ layers.innerHTML="";
 
 objects.forEach(obj=>{
 
-// canvas element
+// canvas item
 const el=document.createElement("div");
 el.className="item";
 el.style.left=obj.x+"px";
@@ -194,10 +168,6 @@ el.style.height=obj.h+"px";
 if(obj.type==="text"){
 el.contentEditable=true;
 el.innerText=obj.text;
-}
-
-if(obj.type==="box"){
-el.style.background="red";
 }
 
 if(obj.type==="image"){
@@ -211,65 +181,44 @@ el.appendChild(img);
 
 canvas.appendChild(el);
 
-// layer
+// layer button
 const layer=document.createElement("div");
 layer.className="layer";
 layer.innerText=obj.type;
 
-layer.onclick=()=>{
-select(obj.id);
-};
+if(obj.id===selected) layer.classList.add("active");
+
+layer.onclick=()=>select(obj.id);
 
 layers.appendChild(layer);
 
-// init interaction
-init(el,obj.id);
+// interaction
+init(el,obj);
 });
 }
 
 /* SELECT */
 function select(id){
 selected=id;
-
-document.querySelectorAll(".item").forEach(el=>{
-el.classList.remove("selected");
-el.querySelectorAll(".handle").forEach(h=>h.style.display="none");
-});
-
-const el=[...document.querySelectorAll(".item")][
-objects.findIndex(o=>o.id===id)
-];
-
-if(el){
-el.classList.add("selected");
-el.querySelectorAll(".handle").forEach(h=>h.style.display="block");
-}
-
-updateLayers();
+render();
 }
 
 /* INIT DRAG + RESIZE */
-function init(el,id){
+function init(el,obj){
 
-let obj=objects.find(o=>o.id===id);
-
-/* DRAG */
 let down=false,ox,oy;
 
 el.onmousedown=e=>{
-if(!isAdmin) return;
-if(e.target.classList.contains("handle")) return;
-
 down=true;
 ox=e.offsetX;
 oy=e.offsetY;
-select(id);
+select(obj.id);
 };
 
 document.addEventListener("mousemove",e=>{
 if(!down) return;
 
-obj.x=e.pageX-ox-200;
+obj.x=e.pageX-ox-420;
 obj.y=e.pageY-oy;
 
 render();
@@ -281,55 +230,16 @@ save();
 down=false;
 }
 });
-
-/* RESIZE */
-addResize(el,obj);
-}
-
-/* RESIZE */
-function addResize(el,obj){
-
-["br"].forEach(()=>{
-const h=document.createElement("div");
-h.className="handle h-br";
-el.appendChild(h);
-
-let resizing=false;
-
-h.onmousedown=e=>{
-if(!isAdmin) return;
-e.stopPropagation();
-resizing=true;
-
-const startX=e.clientX;
-const startY=e.clientY;
-
-document.onmousemove=ev=>{
-if(!resizing) return;
-
-obj.w=Math.max(30, obj.w+(ev.clientX-startX));
-obj.h=Math.max(30, obj.h+(ev.clientY-startY));
-
-render();
-};
-
-document.onmouseup=()=>{
-resizing=false;
-document.onmousemove=null;
-save();
-};
-};
-});
 }
 
 /* SAVE */
 function save(){
-localStorage.setItem("figma_data",JSON.stringify(objects));
+localStorage.setItem("figma_simple",JSON.stringify(objects));
 }
 
 /* LOAD */
 window.onload=()=>{
-const saved=localStorage.getItem("figma_data");
+const saved=localStorage.getItem("figma_simple");
 if(saved){
 objects=JSON.parse(saved);
 render();
