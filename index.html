@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Simple Figma</title>
+<title>Figma Fix UI</title>
 
 <style>
 body{
@@ -12,6 +12,7 @@ font-family:Arial;
 overflow:hidden;
 }
 
+/* LEFT LAYERS PANEL */
 #layers{
 position:fixed;
 left:0;
@@ -24,76 +25,77 @@ padding:10px;
 overflow:auto;
 }
 
+/* LAYER ITEM */
 .layer{
 padding:6px;
 margin:4px 0;
 background:#2a2a2a;
 cursor:pointer;
+font-size:13px;
 }
 
 .layer.active{
 background:#4da3ff;
 }
 
+/* TOOLBAR (RIGHT PANEL) */
 #toolbar{
 position:fixed;
 top:0;
 left:220px;
-width:200px;
+width:160px;   /* УМЕНЬШИЛ */
 height:100%;
 background:#111;
 padding:10px;
-color:white;
 box-sizing:border-box;
 }
 
 button, input{
 width:100%;
-margin:6px 0;
+margin:5px 0;
+padding:6px;   /* УМЕНЬШИЛ КНОПКИ */
+font-size:12px;
 }
 
+/* CANVAS */
 #canvas{
-margin-left:420px;
-width:calc(100vw - 420px);
+margin-left:380px;
+width:calc(100vw - 380px);
 height:100vh;
 position:relative;
 background:#f5f5f5;
 overflow:hidden;
 }
 
+/* OBJECT */
 .item{
 position:absolute;
 user-select:none;
 }
 
+/* selected */
 .selected{
 outline:2px solid #4da3ff;
-}
-
-.handle{
-width:10px;
-height:10px;
-background:#4da3ff;
-position:absolute;
-right:-5px;
-bottom:-5px;
-cursor:se-resize;
-display:none;
 }
 </style>
 </head>
 
 <body>
 
-<div id="layers"></div>
-
-<div id="toolbar">
-<button onclick="addText()">➕ Текст</button>
-<button onclick="addImage()">🖼 Картинка</button>
-<button onclick="del()">🗑 Удалить</button>
-<input type="file" id="imgUpload">
+<!-- LEFT LAYERS -->
+<div id="layers">
+<button onclick="addLayer()" style="background:#4da3ff;">➕ Добавить слой</button>
 </div>
 
+<!-- TOOLBAR -->
+<div id="toolbar">
+<button onclick="addText()">Text</button>
+<button onclick="addBox()">Box</button>
+<input type="file" id="imgUpload">
+<button onclick="del()">Delete</button>
+</div>
+
+<!-- CANVAS -->
 <div id="canvas"></div>
 
 <script>
@@ -104,25 +106,45 @@ const imgUpload=document.getElementById("imgUpload");
 let objects=[];
 let selected=null;
 
-/* CREATE TEXT */
-function addText(){
-objects.push({
+/* ===== ADD LAYER (TEXT) ===== */
+function addLayer(){
+const obj={
 id:Date.now()+Math.random(),
 type:"text",
-x:100,y:100,
-w:150,h:50,
-text:"Текст"
-});
+x:window.innerWidth/2-50,   // ЦЕНТР ЭКРАНА
+y:window.innerHeight/2-25,
+w:120,
+h:40,
+text:"Text"
+};
+
+objects.push(obj);
 render();
 save();
 }
 
-/* CREATE IMAGE BUTTON */
-function addImage(){
-imgUpload.click();
+/* ADD TEXT (RIGHT BUTTON) */
+function addText(){
+addLayer();
 }
 
-/* IMAGE LOAD */
+/* BOX */
+function addBox(){
+const obj={
+id:Date.now()+Math.random(),
+type:"box",
+x:window.innerWidth/2-50,
+y:window.innerHeight/2-50,
+w:120,
+h:120
+};
+
+objects.push(obj);
+render();
+save();
+}
+
+/* IMAGE */
 imgUpload.onchange=e=>{
 const file=e.target.files[0];
 if(!file)return;
@@ -132,18 +154,23 @@ reader.onload=()=>{
 objects.push({
 id:Date.now()+Math.random(),
 type:"image",
-x:100,y:100,
-w:200,h:150,
+x:window.innerWidth/2-100,
+y:window.innerHeight/2-75,
+w:200,
+h:150,
 src:reader.result
 });
+
 render();
 save();
 };
+
 reader.readAsDataURL(file);
 };
 
 /* DELETE */
 function del(){
+if(!selected)return;
 objects=objects.filter(o=>o.id!==selected);
 selected=null;
 render();
@@ -153,11 +180,11 @@ save();
 /* RENDER */
 function render(){
 canvas.innerHTML="";
-layers.innerHTML="";
+layers.innerHTML='<button onclick="addLayer()" style="background:#4da3ff;">➕ Добавить слой</button>';
 
 objects.forEach(obj=>{
 
-// canvas item
+// element
 const el=document.createElement("div");
 el.className="item";
 el.style.left=obj.x+"px";
@@ -168,6 +195,14 @@ el.style.height=obj.h+"px";
 if(obj.type==="text"){
 el.contentEditable=true;
 el.innerText=obj.text;
+el.style.display="flex";
+el.style.alignItems="center";
+el.style.justifyContent="center";
+el.style.fontSize="18px";
+}
+
+if(obj.type==="box"){
+el.style.background="red";
 }
 
 if(obj.type==="image"){
@@ -181,29 +216,23 @@ el.appendChild(img);
 
 canvas.appendChild(el);
 
-// layer button
+// layer UI
 const layer=document.createElement("div");
 layer.className="layer";
 layer.innerText=obj.type;
 
 if(obj.id===selected) layer.classList.add("active");
 
-layer.onclick=()=>select(obj.id);
+layer.onclick=()=>selected=obj.id;
 
 layers.appendChild(layer);
 
-// interaction
+// drag
 init(el,obj);
 });
 }
 
-/* SELECT */
-function select(id){
-selected=id;
-render();
-}
-
-/* INIT DRAG + RESIZE */
+/* DRAG */
 function init(el,obj){
 
 let down=false,ox,oy;
@@ -212,13 +241,14 @@ el.onmousedown=e=>{
 down=true;
 ox=e.offsetX;
 oy=e.offsetY;
-select(obj.id);
+selected=obj.id;
+render();
 };
 
 document.addEventListener("mousemove",e=>{
 if(!down) return;
 
-obj.x=e.pageX-ox-420;
+obj.x=e.pageX-ox-380;
 obj.y=e.pageY-oy;
 
 render();
@@ -234,12 +264,12 @@ down=false;
 
 /* SAVE */
 function save(){
-localStorage.setItem("figma_simple",JSON.stringify(objects));
+localStorage.setItem("figma_fix",JSON.stringify(objects));
 }
 
 /* LOAD */
 window.onload=()=>{
-const saved=localStorage.getItem("figma_simple");
+const saved=localStorage.getItem("figma_fix");
 if(saved){
 objects=JSON.parse(saved);
 render();
