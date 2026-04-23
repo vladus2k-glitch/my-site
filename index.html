@@ -3,333 +3,233 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini Figma PRO</title>
+<title>Редактор</title>
 
 <style>
 body{
 margin:0;
 font-family:Arial;
-overflow:hidden;
+overflow-x:hidden;
+touch-action:none;
 }
 
-/* LEFT LAYERS */
-#layers{
+/* кнопка */
+#editBtn{
 position:fixed;
-left:0;
-top:0;
-width:220px;
-height:100%;
-background:#1e1e1e;
+top:10px;
+left:10px;
+padding:10px 14px;
+background:black;
 color:white;
+border:none;
+cursor:pointer;
+z-index:1000;
+font-size:14px;
+}
+
+/* панель */
+#panel{
+position:fixed;
+top:50px;
+left:10px;
+background:white;
 padding:10px;
+box-shadow:0 0 10px rgba(0,0,0,0.2);
+display:none;
+z-index:1000;
+width:180px;
+font-size:14px;
+border-radius:8px;
+}
+
+/* фон */
+#bg{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+z-index:-1;
+background:#ddd;
+}
+
+/* контент */
+#content{
+position:relative;
+width:100vw;
+height:100vh;
+padding:80px 10px;
+}
+
+/* слой */
+.layer{
+position:absolute;
+padding:8px;
+border:1px dashed gray;
+background:rgba(255,255,255,0.7);
+min-width:50px;
+min-height:30px;
+resize:both;
 overflow:auto;
+cursor:move;
+font-size:16px;
+border-radius:4px;
+}
+
+/* угол */
+.layer::after{
+content:"";
+position:absolute;
+right:0;
+bottom:0;
+width:10px;
+height:10px;
+background:gray;
+cursor:se-resize;
+}
+
+/* 📱 адаптация */
+@media (max-width:768px){
+#panel{
+width:90vw;
+left:5vw;
+}
+
+#editBtn{
+font-size:16px;
+padding:12px;
 }
 
 .layer{
-padding:6px;
-margin:4px 0;
-background:#2a2a2a;
-cursor:pointer;
-font-size:13px;
+font-size:18px;
 }
-
-.layer.active{
-background:#4da3ff;
-}
-
-/* TOOLBAR */
-#toolbar{
-position:fixed;
-top:0;
-left:220px;
-width:160px;
-height:100%;
-background:#111;
-padding:10px;
-box-sizing:border-box;
-color:white;
-}
-
-button, input{
-width:100%;
-margin:5px 0;
-font-size:12px;
-padding:6px;
-}
-
-/* CANVAS */
-#canvas{
-margin-left:380px;
-width:calc(100vw - 380px);
-height:100vh;
-position:relative;
-background:#f5f5f5;
-overflow:hidden;
-}
-
-.item{
-position:absolute;
-user-select:none;
-}
-
-.selected{
-outline:2px solid #4da3ff;
-}
-
-/* MENU */
-#menu{
-position:fixed;
-top:60px;
-left:230px;
-background:#222;
-padding:10px;
-display:none;
-z-index:999;
-}
-
-#menu button{
-width:100%;
-margin:5px 0;
-}
-
-/* blur slider */
-#blurPanel{
-position:fixed;
-bottom:10px;
-left:230px;
-background:#111;
-color:white;
-padding:10px;
-display:none;
 }
 </style>
 </head>
 
 <body>
 
-<div id="layers">
-<button onclick="toggleMenu()" style="background:#4da3ff;">➕ Добавить слой</button>
+<div id="bg"></div>
+
+<button id="editBtn">Edit</button>
+
+<div id="panel">
+Фон:
+<input type="color" id="bgColor"><br><br>
+
+Blur:
+<input type="range" id="blur" min="0" max="10" value="0"><br><br>
+
+<button onclick="addLayer()">+ слой</button>
+<button onclick="save()">Save</button>
 </div>
 
-<div id="menu">
-<button onclick="addText()">Text</button>
-<button onclick="addBox()">Box</button>
-<button onclick="chooseImage()">Image</button>
+<div id="content">
+<h1>Мой сайт</h1>
+<p>Нажми Edit</p>
 </div>
-
-<div id="toolbar">
-<button onclick="del()">Delete</button>
-</div>
-
-<div id="blurPanel">
-Blur: <input type="range" min="0" max="20" value="0" oninput="setBlur(this.value)">
-</div>
-
-<input type="file" id="imgUpload" style="display:none">
-
-<div id="canvas"></div>
 
 <script>
-const canvas=document.getElementById("canvas");
-const layers=document.getElementById("layers");
-const menu=document.getElementById("menu");
-const imgUpload=document.getElementById("imgUpload");
-const blurPanel=document.getElementById("blurPanel");
+const PASSWORD = "1234";
 
-let objects=[];
-let selected=null;
+const editBtn = document.getElementById("editBtn");
+const panel = document.getElementById("panel");
+const content = document.getElementById("content");
+const bg = document.getElementById("bg");
+const bgColor = document.getElementById("bgColor");
+const blur = document.getElementById("blur");
 
-/* TOGGLE MENU */
-function toggleMenu(){
-menu.style.display=menu.style.display==="block"?"none":"block";
-}
-
-/* CREATE OBJECT */
-function create(type,extra={}){
-return{
-id:Date.now()+Math.random(),
-type,
-x:window.innerWidth/2,
-y:window.innerHeight/2,
-w:150,
-h:80,
-blur:0,
-text:"Text",
-src:"",
-...extra
-};
-}
-
-/* TEXT */
-function addText(){
-objects.push(create("text"));
-menu.style.display="none";
-render();
-save();
-}
-
-/* BOX */
-function addBox(){
-objects.push(create("box",{w:120,h:120}));
-menu.style.display="none";
-render();
-save();
-}
-
-/* IMAGE */
-function chooseImage(){
-imgUpload.click();
-menu.style.display="none";
-}
-
-imgUpload.onchange=e=>{
-const file=e.target.files[0];
-if(!file)return;
-
-const reader=new FileReader();
-reader.onload=()=>{
-objects.push(create("image",{src:reader.result,w:200,h:150}));
-render();
-save();
-};
-reader.readAsDataURL(file);
-};
-
-/* DELETE */
-function del(){
-if(!selected)return;
-objects=objects.filter(o=>o.id!==selected);
-selected=null;
-blurPanel.style.display="none";
-render();
-save();
-}
-
-/* BLUR */
-function setBlur(val){
-const obj=objects.find(o=>o.id===selected);
-if(obj && obj.type==="image"){
-obj.blur=val;
-render();
-save();
-}
-}
-
-/* RENDER */
-function render(){
-canvas.innerHTML="";
-layers.innerHTML='<button onclick="toggleMenu()" style="background:#4da3ff;">➕ Добавить слой</button>';
-
-objects.forEach(obj=>{
-
-const el=document.createElement("div");
-el.className="item";
-
-el.style.left=obj.x+"px";
-el.style.top=obj.y+"px";
-el.style.width=obj.w+"px";
-el.style.height=obj.h+"px";
-
-/* TEXT */
-if(obj.type==="text"){
-el.contentEditable=true;
-el.innerText=obj.text;
-el.style.display="flex";
-el.style.alignItems="center";
-el.style.justifyContent="center";
-}
-
-/* BOX */
-if(obj.type==="box"){
-el.style.background="red";
-}
-
-/* IMAGE + BLUR */
-if(obj.type==="image"){
-const img=document.createElement("img");
-img.src=obj.src;
-img.style.width="100%";
-img.style.height="100%";
-img.style.objectFit="cover";
-img.style.filter=`blur(${obj.blur||0}px)`;
-el.appendChild(img);
-}
-
-canvas.appendChild(el);
-
-/* LAYER */
-const layer=document.createElement("div");
-layer.className="layer";
-layer.innerText=obj.type;
-
-layer.onclick=()=>{
-select(obj.id);
-};
-
-layers.appendChild(layer);
-
-/* INIT */
-init(el,obj);
-});
-}
-
-/* SELECT */
-function select(id){
-selected=id;
-
-const obj=objects.find(o=>o.id===id);
-
-/* blur panel */
-if(obj && obj.type==="image"){
-blurPanel.style.display="block";
-blurPanel.querySelector("input").value=obj.blur||0;
+editBtn.onclick = () => {
+let pass = prompt("Пароль:");
+if(pass === PASSWORD){
+panel.style.display = "block";
+content.contentEditable = true;
 }else{
-blurPanel.style.display="none";
+alert("Неверно");
 }
-
-render();
-}
-
-/* DRAG */
-function init(el,obj){
-
-let down=false,ox,oy;
-
-el.onmousedown=e=>{
-down=true;
-ox=e.offsetX;
-oy=e.offsetY;
-select(obj.id);
 };
 
-document.addEventListener("mousemove",e=>{
-if(!down) return;
+/* фон */
+bgColor.oninput = () => {
+bg.style.background = bgColor.value;
+};
 
-obj.x=e.pageX-ox-380;
-obj.y=e.pageY-oy;
+/* blur */
+blur.oninput = () => {
+bg.style.filter = `blur(${blur.value}px)`;
+};
 
-render();
-});
+/* слой */
+function addLayer(){
+let div = document.createElement("div");
+div.className = "layer";
+div.contentEditable = true;
+div.innerText = "Новый слой";
 
-document.addEventListener("mouseup",()=>{
-if(down){
-save();
-down=false;
+div.style.top = "100px";
+div.style.left = "100px";
+
+let offsetX, offsetY;
+let dragging = false;
+
+div.addEventListener("mousedown", startDrag);
+div.addEventListener("touchstart", startDrag);
+
+function startDrag(e){
+dragging = true;
+
+let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+offsetX = clientX - div.offsetLeft;
+offsetY = clientY - div.offsetTop;
+
+document.addEventListener("mousemove", move);
+document.addEventListener("touchmove", move);
+document.addEventListener("mouseup", stop);
+document.addEventListener("touchend", stop);
 }
-});
+
+function move(e){
+if(!dragging) return;
+
+let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+div.style.left = (clientX - offsetX) + "px";
+div.style.top = (clientY - offsetY) + "px";
 }
 
-/* SAVE */
+function stop(){
+dragging = false;
+document.removeEventListener("mousemove", move);
+document.removeEventListener("touchmove", move);
+document.removeEventListener("mouseup", stop);
+document.removeEventListener("touchend", stop);
+}
+
+content.appendChild(div);
+}
+
+/* save */
 function save(){
-localStorage.setItem("figma_pro",JSON.stringify(objects));
+localStorage.setItem("html", content.innerHTML);
+localStorage.setItem("bg", bg.style.background);
+localStorage.setItem("blur", blur.value);
+alert("Saved");
 }
 
-/* LOAD */
-window.onload=()=>{
-const saved=localStorage.getItem("figma_pro");
-if(saved){
-objects=JSON.parse(saved);
-render();
+/* load */
+window.onload = () => {
+let h = localStorage.getItem("html");
+let b = localStorage.getItem("bg");
+let bl = localStorage.getItem("blur");
+
+if(h) content.innerHTML = h;
+if(b) bg.style.background = b;
+if(bl){
+blur.value = bl;
+bg.style.filter = `blur(${bl}px)`;
 }
 };
 </script>
