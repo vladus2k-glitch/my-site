@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Editable Site</title>
+<title>Editor</title>
 
 <style>
 body{
 margin:0;
-font-family:Arial, sans-serif;
-transition:0.3s;
+font-family:Arial;
 }
 
 #editBtn{
@@ -22,7 +21,7 @@ color:white;
 border:none;
 cursor:pointer;
 z-index:1000;
-border-radius:6px;
+display:none;
 }
 
 #panel{
@@ -34,15 +33,21 @@ padding:10px;
 box-shadow:0 0 10px rgba(0,0,0,0.2);
 display:none;
 z-index:1000;
-border-radius:8px;
 }
 
-[contenteditable="true"]{
+#canvas{
+position:relative;
+width:100%;
+height:100vh;
+}
+
+.draggable{
+position:absolute;
+cursor:move;
+}
+
+.editing{
 outline:2px dashed gray;
-}
-
-#content{
-padding:70px 20px;
 }
 </style>
 </head>
@@ -52,52 +57,112 @@ padding:70px 20px;
 <button id="editBtn">Редактировать</button>
 
 <div id="panel">
-<div>
-Задний фон:
+<button onclick="addText()">Добавить текст</button>
+<br><br>
+<input type="file" id="imgUpload">
+<br><br>
+Фон:
 <input type="color" id="bgColor">
 </div>
-<br>
-<button onclick="save()">Сохранить</button>
-</div>
 
-<div id="content" contenteditable="false">
-<h1>Мой сайт</h1>
-<p>Нажми "Редактировать" чтобы изменить текст.</p>
-</div>
+<div id="canvas"></div>
 
 <script>
-const PASSWORD = "1234";
+const ADMIN_KEY="123456";
 
-const editBtn = document.getElementById("editBtn");
-const panel = document.getElementById("panel");
-const content = document.getElementById("content");
-const bgColor = document.getElementById("bgColor");
+const params=new URLSearchParams(location.search);
+const isAdmin=params.get("admin")===ADMIN_KEY;
 
-editBtn.onclick = () => {
-let pass = prompt("Введите пароль");
-if(pass === PASSWORD){
-content.contentEditable = true;
-panel.style.display = "block";
-}else{
-alert("Неверный пароль");
+const editBtn=document.getElementById("editBtn");
+const panel=document.getElementById("panel");
+const canvas=document.getElementById("canvas");
+const imgUpload=document.getElementById("imgUpload");
+const bgColor=document.getElementById("bgColor");
+
+if(isAdmin){
+editBtn.style.display="block";
 }
+
+editBtn.onclick=()=>{
+panel.style.display="block";
+};
+
+function addText(){
+const div=document.createElement("div");
+div.className="draggable editing";
+div.contentEditable=true;
+div.innerText="Новый текст";
+div.style.left="100px";
+div.style.top="100px";
+
+canvas.appendChild(div);
+makeDraggable(div);
+save();
+}
+
+imgUpload.onchange=e=>{
+const file=e.target.files[0];
+const reader=new FileReader();
+
+reader.onload=()=>{
+const img=document.createElement("img");
+img.src=reader.result;
+img.className="draggable";
+img.style.left="100px";
+img.style.top="100px";
+img.style.width="200px";
+
+canvas.appendChild(img);
+makeDraggable(img);
+save();
+};
+
+reader.readAsDataURL(file);
+};
+
+function makeDraggable(el){
+let offsetX,offsetY,drag=false;
+
+el.onmousedown=e=>{
+drag=true;
+offsetX=e.offsetX;
+offsetY=e.offsetY;
+};
+
+document.onmousemove=e=>{
+if(!drag) return;
+el.style.left=(e.pageX-offsetX)+"px";
+el.style.top=(e.pageY-offsetY)+"px";
+};
+
+document.onmouseup=()=>{
+if(drag) save();
+drag=false;
+};
+}
+
+bgColor.oninput=()=>{
+document.body.style.background=bgColor.value;
+save();
 };
 
 function save(){
-localStorage.setItem("site-content", content.innerHTML);
-localStorage.setItem("site-bg", document.body.style.background);
+localStorage.setItem("canvas",canvas.innerHTML);
+localStorage.setItem("bg",document.body.style.background);
 }
 
-bgColor.oninput = () => {
-document.body.style.background = bgColor.value;
-};
+window.onload=()=>{
+const saved=localStorage.getItem("canvas");
+const bg=localStorage.getItem("bg");
 
-window.onload = () => {
-const savedContent = localStorage.getItem("site-content");
-const savedBg = localStorage.getItem("site-bg");
+if(saved){
+canvas.innerHTML=saved;
+document.querySelectorAll(".draggable").forEach(makeDraggable);
+}
 
-if(savedContent) content.innerHTML = savedContent;
-if(savedBg) document.body.style.background = savedBg;
+if(bg){
+document.body.style.background=bg;
+}
 };
 </script>
 
