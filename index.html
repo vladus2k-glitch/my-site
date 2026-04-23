@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini Figma</title>
+<title>Mini Figma + Layers</title>
 
 <style>
 body{
@@ -12,24 +12,52 @@ font-family:Arial;
 overflow:hidden;
 }
 
+/* LEFT LAYERS PANEL */
+#layers{
+position:fixed;
+left:0;
+top:0;
+width:200px;
+height:100%;
+background:#1e1e1e;
+color:white;
+padding:10px;
+overflow-y:auto;
+}
+
+.layer{
+padding:6px;
+margin:4px 0;
+background:#2a2a2a;
+cursor:pointer;
+font-size:14px;
+}
+
+.layer.active{
+background:#4da3ff;
+}
+
+/* TOOLBAR */
 #toolbar{
 position:fixed;
 top:10px;
-left:10px;
+left:210px;
 background:#111;
 padding:10px;
 color:white;
-z-index:1000;
 display:none;
+z-index:1000;
 }
 
 button{
-margin:5px 0;
 width:100%;
+margin:5px 0;
 }
 
+/* CANVAS */
 #canvas{
-width:100vw;
+margin-left:200px;
+width:calc(100vw - 200px);
 height:100vh;
 position:relative;
 background:#f5f5f5;
@@ -45,7 +73,7 @@ user-select:none;
 outline:2px solid #4da3ff;
 }
 
-/* resize handles (Figma style) */
+/* resize handles */
 .handle{
 width:10px;
 height:10px;
@@ -53,7 +81,6 @@ background:#4da3ff;
 position:absolute;
 display:none;
 }
-
 .h-tl{top:-5px;left:-5px;cursor:nwse-resize;}
 .h-tr{top:-5px;right:-5px;cursor:nesw-resize;}
 .h-bl{bottom:-5px;left:-5px;cursor:nesw-resize;}
@@ -62,6 +89,8 @@ display:none;
 </head>
 
 <body>
+
+<div id="layers"></div>
 
 <div id="toolbar">
 <button onclick="addText()">Text</button>
@@ -76,6 +105,7 @@ const ADMIN="123456";
 const isAdmin=new URLSearchParams(location.search).get("admin")===ADMIN;
 
 const canvas=document.getElementById("canvas");
+const layers=document.getElementById("layers");
 const toolbar=document.getElementById("toolbar");
 
 let selected=null;
@@ -84,55 +114,60 @@ if(isAdmin){
 toolbar.style.display="block";
 }
 
-// CREATE TEXT
+/* ADD TEXT */
 function addText(){
-const el=document.createElement("div");
-el.className="item";
+const el=createItem("Text");
 el.contentEditable=true;
 el.innerText="Text";
-el.style.left="100px";
-el.style.top="100px";
-el.style.fontSize="20px";
 el.style.width="120px";
+el.style.height="50px";
 canvas.appendChild(el);
 init(el);
+updateLayers();
 save();
 }
 
-// CREATE BOX
+/* ADD BOX */
 function addBox(){
+const el=createItem("Box");
+el.style.background="red";
+el.style.width="120px";
+el.style.height="120px";
+canvas.appendChild(el);
+init(el);
+updateLayers();
+save();
+}
+
+/* CREATE ITEM */
+function createItem(name){
 const el=document.createElement("div");
 el.className="item";
 el.style.left="100px";
 el.style.top="100px";
-el.style.width="120px";
-el.style.height="120px";
-el.style.background="red";
-canvas.appendChild(el);
-init(el);
-save();
+el.dataset.name=name;
+return el;
 }
 
-// DELETE
+/* DELETE */
 function del(){
 if(selected){
 selected.remove();
 selected=null;
+updateLayers();
 save();
 }
 }
 
-// INIT ELEMENT
+/* INIT */
 function init(el){
 
 el.onclick=(e)=>{
 if(!isAdmin) return;
-
 select(el);
 e.stopPropagation();
 };
 
-// drag
 let down=false,ox,oy;
 
 el.onmousedown=e=>{
@@ -146,16 +181,56 @@ oy=e.offsetY;
 
 document.addEventListener("mousemove",e=>{
 if(!down) return;
-el.style.left=(e.pageX-ox)+"px";
+el.style.left=(e.pageX-ox-200)+"px";
 el.style.top=(e.pageY-oy)+"px";
 });
 
 document.addEventListener("mouseup",()=>{
-if(down) save();
+if(down){
+save();
+updateLayers();
+}
 down=false;
 });
 
-// resize handles
+/* resize */
+addResize(el);
+}
+
+/* SELECT */
+function select(el){
+document.querySelectorAll(".item").forEach(i=>{
+i.classList.remove("selected");
+i.querySelectorAll(".handle").forEach(h=>h.style.display="none");
+});
+
+selected=el;
+el.classList.add("selected");
+el.querySelectorAll(".handle").forEach(h=>h.style.display="block");
+
+updateLayers();
+}
+
+/* LAYERS */
+function updateLayers(){
+layers.innerHTML="";
+
+document.querySelectorAll(".item").forEach((el,i)=>{
+const div=document.createElement("div");
+div.className="layer";
+div.innerText=el.dataset.name || "Layer "+i;
+
+if(el===selected) div.classList.add("active");
+
+div.onclick=()=>{
+select(el);
+};
+layers.appendChild(div);
+});
+}
+
+/* RESIZE */
+function addResize(el){
 ["tl","tr","bl","br"].forEach(pos=>{
 const h=document.createElement("div");
 h.className="handle h-"+pos;
@@ -165,7 +240,6 @@ let resizing=false;
 
 h.onmousedown=e=>{
 if(!isAdmin) return;
-
 e.stopPropagation();
 resizing=true;
 
@@ -213,24 +287,12 @@ save();
 });
 }
 
-// SELECT
-function select(el){
-document.querySelectorAll(".item").forEach(i=>{
-i.classList.remove("selected");
-i.querySelectorAll(".handle").forEach(h=>h.style.display="none");
-});
-
-selected=el;
-el.classList.add("selected");
-el.querySelectorAll(".handle").forEach(h=>h.style.display="block");
-}
-
-// SAVE
+/* SAVE */
 function save(){
 localStorage.setItem("figma",canvas.innerHTML);
 }
 
-// LOAD
+/* LOAD */
 window.onload=()=>{
 const saved=localStorage.getItem("figma");
 if(saved){
