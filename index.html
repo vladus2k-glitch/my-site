@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Site Builder FIX</title>
+<title>Builder FIX FINAL</title>
 
 <style>
 body{
@@ -47,12 +47,13 @@ min-height:100vh;
 position:relative;
 }
 
+/* objects */
 .box{
 position:absolute;
-cursor:move;
 user-select:none;
 }
 
+/* selected */
 .selected{
 outline:2px dashed #4da3ff;
 }
@@ -99,14 +100,21 @@ const bgColor=document.getElementById("bgColor");
 const del=document.getElementById("delete");
 
 let selected=null;
+let editing=false;
 
 if(isAdmin){
 editBtn.style.display="block";
 }
 
 editBtn.onclick=()=>{
-panel.style.display = panel.style.display==="block"?"none":"block";
+editing=!editing;
+panel.style.display=editing?"block":"none";
 };
+
+// BLOCK DRAG IF NOT EDITOR
+function canEdit(){
+return editing;
+}
 
 // ADD TEXT
 addText.onclick=()=>{
@@ -169,6 +177,8 @@ function make(el){
 const handle=el.querySelector(".handle");
 
 el.onclick=(e)=>{
+if(!editing) return;
+
 document.querySelectorAll(".box").forEach(b=>{
 b.classList.remove("selected");
 let h=b.querySelector(".handle");
@@ -183,10 +193,11 @@ if(handle) handle.style.display="block";
 e.stopPropagation();
 };
 
-// drag
+// DRAG ONLY IN EDIT MODE
 let down=false,ox,oy;
 
 el.onmousedown=e=>{
+if(!editing) return;
 if(e.target.classList.contains("handle")) return;
 
 down=true;
@@ -206,7 +217,7 @@ down=false;
 });
 }
 
-// RESIZE FIXED (works for text + images)
+// RESIZE FIXED
 function addHandle(el){
 const h=document.createElement("div");
 h.className="handle";
@@ -215,6 +226,8 @@ el.appendChild(h);
 let resizing=false;
 
 h.onmousedown=(e)=>{
+if(!editing) return;
+
 e.stopPropagation();
 resizing=true;
 
@@ -231,9 +244,7 @@ const newW=startW+(ev.clientX-startX);
 const newH=startH+(ev.clientY-startY);
 
 if(newW>30) el.style.width=newW+"px";
-if(newH>30){
-el.style.height=newH+"px";
-}
+if(newH>30) el.style.height=newH+"px";
 };
 
 document.onmouseup=()=>{
