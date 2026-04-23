@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Figma Fix UI</title>
+<title>Mini Figma PRO</title>
 
 <style>
 body{
@@ -12,7 +12,7 @@ font-family:Arial;
 overflow:hidden;
 }
 
-/* LEFT LAYERS PANEL */
+/* LEFT LAYERS */
 #layers{
 position:fixed;
 left:0;
@@ -25,7 +25,6 @@ padding:10px;
 overflow:auto;
 }
 
-/* LAYER ITEM */
 .layer{
 padding:6px;
 margin:4px 0;
@@ -38,23 +37,24 @@ font-size:13px;
 background:#4da3ff;
 }
 
-/* TOOLBAR (RIGHT PANEL) */
+/* TOOLBAR */
 #toolbar{
 position:fixed;
 top:0;
 left:220px;
-width:160px;   /* УМЕНЬШИЛ */
+width:160px;
 height:100%;
 background:#111;
 padding:10px;
 box-sizing:border-box;
+color:white;
 }
 
 button, input{
 width:100%;
 margin:5px 0;
-padding:6px;   /* УМЕНЬШИЛ КНОПКИ */
 font-size:12px;
+padding:6px;
 }
 
 /* CANVAS */
@@ -67,104 +67,131 @@ background:#f5f5f5;
 overflow:hidden;
 }
 
-/* OBJECT */
 .item{
 position:absolute;
 user-select:none;
 }
 
-/* selected */
 .selected{
 outline:2px solid #4da3ff;
+}
+
+/* MENU */
+#menu{
+position:fixed;
+top:60px;
+left:230px;
+background:#222;
+padding:10px;
+display:none;
+z-index:999;
+}
+
+#menu button{
+width:100%;
+margin:5px 0;
+}
+
+/* blur slider */
+#blurPanel{
+position:fixed;
+bottom:10px;
+left:230px;
+background:#111;
+color:white;
+padding:10px;
+display:none;
 }
 </style>
 </head>
 
 <body>
 
-<!-- LEFT LAYERS -->
 <div id="layers">
-<button onclick="addLayer()" style="background:#4da3ff;">➕ Добавить слой</button>
+<button onclick="toggleMenu()" style="background:#4da3ff;">➕ Добавить слой</button>
 </div>
 
-<!-- TOOLBAR -->
-<div id="toolbar">
+<div id="menu">
 <button onclick="addText()">Text</button>
 <button onclick="addBox()">Box</button>
-<input type="file" id="imgUpload">
+<button onclick="chooseImage()">Image</button>
+</div>
+
+<div id="toolbar">
 <button onclick="del()">Delete</button>
 </div>
 
-<!-- CANVAS -->
+<div id="blurPanel">
+Blur: <input type="range" min="0" max="20" value="0" oninput="setBlur(this.value)">
+</div>
+
+<input type="file" id="imgUpload" style="display:none">
+
 <div id="canvas"></div>
 
 <script>
 const canvas=document.getElementById("canvas");
 const layers=document.getElementById("layers");
+const menu=document.getElementById("menu");
 const imgUpload=document.getElementById("imgUpload");
+const blurPanel=document.getElementById("blurPanel");
 
 let objects=[];
 let selected=null;
 
-/* ===== ADD LAYER (TEXT) ===== */
-function addLayer(){
-const obj={
-id:Date.now()+Math.random(),
-type:"text",
-x:window.innerWidth/2-50,   // ЦЕНТР ЭКРАНА
-y:window.innerHeight/2-25,
-w:120,
-h:40,
-text:"Text"
-};
+/* TOGGLE MENU */
+function toggleMenu(){
+menu.style.display=menu.style.display==="block"?"none":"block";
+}
 
-objects.push(obj);
+/* CREATE OBJECT */
+function create(type,extra={}){
+return{
+id:Date.now()+Math.random(),
+type,
+x:window.innerWidth/2,
+y:window.innerHeight/2,
+w:150,
+h:80,
+blur:0,
+text:"Text",
+src:"",
+...extra
+};
+}
+
+/* TEXT */
+function addText(){
+objects.push(create("text"));
+menu.style.display="none";
 render();
 save();
 }
 
-/* ADD TEXT (RIGHT BUTTON) */
-function addText(){
-addLayer();
-}
-
 /* BOX */
 function addBox(){
-const obj={
-id:Date.now()+Math.random(),
-type:"box",
-x:window.innerWidth/2-50,
-y:window.innerHeight/2-50,
-w:120,
-h:120
-};
-
-objects.push(obj);
+objects.push(create("box",{w:120,h:120}));
+menu.style.display="none";
 render();
 save();
 }
 
 /* IMAGE */
+function chooseImage(){
+imgUpload.click();
+menu.style.display="none";
+}
+
 imgUpload.onchange=e=>{
 const file=e.target.files[0];
 if(!file)return;
 
 const reader=new FileReader();
 reader.onload=()=>{
-objects.push({
-id:Date.now()+Math.random(),
-type:"image",
-x:window.innerWidth/2-100,
-y:window.innerHeight/2-75,
-w:200,
-h:150,
-src:reader.result
-});
-
+objects.push(create("image",{src:reader.result,w:200,h:150}));
 render();
 save();
 };
-
 reader.readAsDataURL(file);
 };
 
@@ -173,63 +200,94 @@ function del(){
 if(!selected)return;
 objects=objects.filter(o=>o.id!==selected);
 selected=null;
+blurPanel.style.display="none";
 render();
 save();
+}
+
+/* BLUR */
+function setBlur(val){
+const obj=objects.find(o=>o.id===selected);
+if(obj && obj.type==="image"){
+obj.blur=val;
+render();
+save();
+}
 }
 
 /* RENDER */
 function render(){
 canvas.innerHTML="";
-layers.innerHTML='<button onclick="addLayer()" style="background:#4da3ff;">➕ Добавить слой</button>';
+layers.innerHTML='<button onclick="toggleMenu()" style="background:#4da3ff;">➕ Добавить слой</button>';
 
 objects.forEach(obj=>{
 
-// element
 const el=document.createElement("div");
 el.className="item";
+
 el.style.left=obj.x+"px";
 el.style.top=obj.y+"px";
 el.style.width=obj.w+"px";
 el.style.height=obj.h+"px";
 
+/* TEXT */
 if(obj.type==="text"){
 el.contentEditable=true;
 el.innerText=obj.text;
 el.style.display="flex";
 el.style.alignItems="center";
 el.style.justifyContent="center";
-el.style.fontSize="18px";
 }
 
+/* BOX */
 if(obj.type==="box"){
 el.style.background="red";
 }
 
+/* IMAGE + BLUR */
 if(obj.type==="image"){
 const img=document.createElement("img");
 img.src=obj.src;
 img.style.width="100%";
 img.style.height="100%";
 img.style.objectFit="cover";
+img.style.filter=`blur(${obj.blur||0}px)`;
 el.appendChild(img);
 }
 
 canvas.appendChild(el);
 
-// layer UI
+/* LAYER */
 const layer=document.createElement("div");
 layer.className="layer";
 layer.innerText=obj.type;
 
-if(obj.id===selected) layer.classList.add("active");
-
-layer.onclick=()=>selected=obj.id;
+layer.onclick=()=>{
+select(obj.id);
+};
 
 layers.appendChild(layer);
 
-// drag
+/* INIT */
 init(el,obj);
 });
+}
+
+/* SELECT */
+function select(id){
+selected=id;
+
+const obj=objects.find(o=>o.id===id);
+
+/* blur panel */
+if(obj && obj.type==="image"){
+blurPanel.style.display="block";
+blurPanel.querySelector("input").value=obj.blur||0;
+}else{
+blurPanel.style.display="none";
+}
+
+render();
 }
 
 /* DRAG */
@@ -241,8 +299,7 @@ el.onmousedown=e=>{
 down=true;
 ox=e.offsetX;
 oy=e.offsetY;
-selected=obj.id;
-render();
+select(obj.id);
 };
 
 document.addEventListener("mousemove",e=>{
@@ -264,12 +321,12 @@ down=false;
 
 /* SAVE */
 function save(){
-localStorage.setItem("figma_fix",JSON.stringify(objects));
+localStorage.setItem("figma_pro",JSON.stringify(objects));
 }
 
 /* LOAD */
 window.onload=()=>{
-const saved=localStorage.getItem("figma_fix");
+const saved=localStorage.getItem("figma_pro");
 if(saved){
 objects=JSON.parse(saved);
 render();
