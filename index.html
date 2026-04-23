@@ -13,7 +13,6 @@ overflow-x:hidden;
 touch-action:none;
 }
 
-/* кнопка */
 #editBtn{
 position:fixed;
 top:10px;
@@ -24,25 +23,21 @@ color:white;
 border:none;
 cursor:pointer;
 z-index:1000;
-font-size:14px;
 }
 
-/* панель */
 #panel{
 position:fixed;
 top:50px;
 left:10px;
 background:white;
 padding:10px;
-box-shadow:0 0 10px rgba(0,0,0,0.2);
 display:none;
 z-index:1000;
-width:180px;
-font-size:14px;
+width:200px;
 border-radius:8px;
+box-shadow:0 0 10px rgba(0,0,0,0.2);
 }
 
-/* фон */
 #bg{
 position:fixed;
 top:0;
@@ -53,7 +48,6 @@ z-index:-1;
 background:#ddd;
 }
 
-/* контент */
 #content{
 position:relative;
 width:100vw;
@@ -61,47 +55,31 @@ height:100vh;
 padding:80px 10px;
 }
 
-/* слой */
+/* 🔲 общий слой */
 .layer{
 position:absolute;
-padding:8px;
+min-width:60px;
+min-height:40px;
+padding:6px;
 border:1px dashed gray;
 background:rgba(255,255,255,0.7);
-min-width:50px;
-min-height:30px;
 resize:both;
 overflow:auto;
 cursor:move;
-font-size:16px;
-border-radius:4px;
 }
 
-/* угол */
-.layer::after{
-content:"";
-position:absolute;
-right:0;
-bottom:0;
-width:10px;
-height:10px;
-background:gray;
-cursor:se-resize;
+/* 🖼 картинка */
+.layer img{
+max-width:100%;
+height:100%;
+display:block;
 }
 
-/* 📱 адаптация */
+/* 📱 мобилка */
 @media (max-width:768px){
 #panel{
 width:90vw;
 left:5vw;
-}
-
-#editBtn{
-font-size:16px;
-padding:12px;
-}
-
-.layer{
-font-size:18px;
 }
 }
 </style>
@@ -114,18 +92,17 @@ font-size:18px;
 <button id="editBtn">Edit</button>
 
 <div id="panel">
-Фон:
 <input type="color" id="bgColor"><br><br>
 
-Blur:
 <input type="range" id="blur" min="0" max="10" value="0"><br><br>
 
-<button onclick="addLayer()">+ слой</button>
+<button onclick="addText()">+ Текст</button>
+<button onclick="addImage()">+ Картинка</button>
 <button onclick="save()">Save</button>
 </div>
 
 <div id="content">
-<h1>Мой сайт</h1>
+<h1>Редактор</h1>
 <p>Нажми Edit</p>
 </div>
 
@@ -139,13 +116,12 @@ const bg = document.getElementById("bg");
 const bgColor = document.getElementById("bgColor");
 const blur = document.getElementById("blur");
 
+/* открыть редактор */
 editBtn.onclick = () => {
 let pass = prompt("Пароль:");
 if(pass === PASSWORD){
 panel.style.display = "block";
 content.contentEditable = true;
-}else{
-alert("Неверно");
 }
 };
 
@@ -159,30 +135,22 @@ blur.oninput = () => {
 bg.style.filter = `blur(${blur.value}px)`;
 };
 
-/* слой */
-function addLayer(){
-let div = document.createElement("div");
-div.className = "layer";
-div.contentEditable = true;
-div.innerText = "Новый слой";
-
-div.style.top = "100px";
-div.style.left = "100px";
-
+/* 🔥 DRAG функция */
+function enableDrag(el){
 let offsetX, offsetY;
 let dragging = false;
 
-div.addEventListener("mousedown", startDrag);
-div.addEventListener("touchstart", startDrag);
+el.addEventListener("mousedown", start);
+el.addEventListener("touchstart", start);
 
-function startDrag(e){
+function start(e){
 dragging = true;
 
-let clientX = e.touches ? e.touches[0].clientX : e.clientX;
-let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+let x = e.touches ? e.touches[0].clientX : e.clientX;
+let y = e.touches ? e.touches[0].clientY : e.clientY;
 
-offsetX = clientX - div.offsetLeft;
-offsetY = clientY - div.offsetTop;
+offsetX = x - el.offsetLeft;
+offsetY = y - el.offsetTop;
 
 document.addEventListener("mousemove", move);
 document.addEventListener("touchmove", move);
@@ -193,11 +161,11 @@ document.addEventListener("touchend", stop);
 function move(e){
 if(!dragging) return;
 
-let clientX = e.touches ? e.touches[0].clientX : e.clientX;
-let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+let x = e.touches ? e.touches[0].clientX : e.clientX;
+let y = e.touches ? e.touches[0].clientY : e.clientY;
 
-div.style.left = (clientX - offsetX) + "px";
-div.style.top = (clientY - offsetY) + "px";
+el.style.left = (x - offsetX) + "px";
+el.style.top = (y - offsetY) + "px";
 }
 
 function stop(){
@@ -207,11 +175,46 @@ document.removeEventListener("touchmove", move);
 document.removeEventListener("mouseup", stop);
 document.removeEventListener("touchend", stop);
 }
+}
+
+/* 📝 текст слой */
+function addText(){
+let div = document.createElement("div");
+div.className = "layer";
+div.contentEditable = true;
+div.innerText = "Текст";
+
+div.style.top = "100px";
+div.style.left = "100px";
+
+enableDrag(div);
 
 content.appendChild(div);
 }
 
-/* save */
+/* 🖼 картинка слой */
+function addImage(){
+let url = prompt("Вставь ссылку на картинку:");
+
+if(!url) return;
+
+let div = document.createElement("div");
+div.className = "layer";
+
+let img = document.createElement("img");
+img.src = url;
+
+div.appendChild(img);
+
+div.style.top = "150px";
+div.style.left = "150px";
+
+enableDrag(div);
+
+content.appendChild(div);
+}
+
+/* 💾 save */
 function save(){
 localStorage.setItem("html", content.innerHTML);
 localStorage.setItem("bg", bg.style.background);
