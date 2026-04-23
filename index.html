@@ -8,20 +8,20 @@
 <style>
 body{
 margin:0;
-font-family:Arial;
+font-family:Arial, sans-serif;
 }
 
 #editBtn{
 position:fixed;
 top:10px;
 left:10px;
-padding:8px 14px;
+padding:8px 12px;
 background:black;
 color:white;
 border:none;
 cursor:pointer;
-z-index:1000;
 display:none;
+z-index:1000;
 }
 
 #panel{
@@ -38,16 +38,12 @@ z-index:1000;
 #canvas{
 position:relative;
 width:100%;
-height:100vh;
+height:2000px;
 }
 
 .draggable{
 position:absolute;
 cursor:move;
-}
-
-.editing{
-outline:2px dashed gray;
 }
 </style>
 </head>
@@ -57,7 +53,7 @@ outline:2px dashed gray;
 <button id="editBtn">Редактировать</button>
 
 <div id="panel">
-<button onclick="addText()">Добавить текст</button>
+<button id="addText">Добавить текст</button>
 <br><br>
 <input type="file" id="imgUpload">
 <br><br>
@@ -68,100 +64,106 @@ outline:2px dashed gray;
 <div id="canvas"></div>
 
 <script>
-const ADMIN_KEY="123456";
+const ADMIN_KEY = "123456";
 
-const params=new URLSearchParams(location.search);
-const isAdmin=params.get("admin")===ADMIN_KEY;
+const params = new URLSearchParams(location.search);
+const isAdmin = params.get("admin") === ADMIN_KEY;
 
-const editBtn=document.getElementById("editBtn");
-const panel=document.getElementById("panel");
-const canvas=document.getElementById("canvas");
-const imgUpload=document.getElementById("imgUpload");
-const bgColor=document.getElementById("bgColor");
+const editBtn = document.getElementById("editBtn");
+const panel = document.getElementById("panel");
+const canvas = document.getElementById("canvas");
+const addTextBtn = document.getElementById("addText");
+const imgUpload = document.getElementById("imgUpload");
+const bgColor = document.getElementById("bgColor");
 
 if(isAdmin){
-editBtn.style.display="block";
+editBtn.style.display = "block";
 }
 
-editBtn.onclick=()=>{
-panel.style.display="block";
+editBtn.onclick = () => {
+panel.style.display = "block";
 };
 
-function addText(){
-const div=document.createElement("div");
-div.className="draggable editing";
-div.contentEditable=true;
-div.innerText="Новый текст";
-div.style.left="100px";
-div.style.top="100px";
-
+// добавление текста
+addTextBtn.onclick = () => {
+const div = document.createElement("div");
+div.className = "draggable";
+div.contentEditable = true;
+div.innerText = "Текст";
+div.style.left = "100px";
+div.style.top = "100px";
 canvas.appendChild(div);
-makeDraggable(div);
+drag(div);
 save();
-}
+};
 
-imgUpload.onchange=e=>{
-const file=e.target.files[0];
-const reader=new FileReader();
+// загрузка картинки
+imgUpload.onchange = function(){
+const file = this.files[0];
+if(!file) return;
 
-reader.onload=()=>{
-const img=document.createElement("img");
-img.src=reader.result;
-img.className="draggable";
-img.style.left="100px";
-img.style.top="100px";
-img.style.width="200px";
+const reader = new FileReader();
+reader.onload = function(e){
+const img = document.createElement("img");
+img.src = e.target.result;
+img.className = "draggable";
+img.style.left = "100px";
+img.style.top = "100px";
+img.style.width = "200px";
 
 canvas.appendChild(img);
-makeDraggable(img);
+drag(img);
 save();
 };
-
 reader.readAsDataURL(file);
 };
 
-function makeDraggable(el){
-let offsetX,offsetY,drag=false;
+// перетаскивание
+function drag(el){
+let isDown=false,offsetX,offsetY;
 
-el.onmousedown=e=>{
-drag=true;
-offsetX=e.offsetX;
-offsetY=e.offsetY;
+el.onmousedown = function(e){
+isDown=true;
+offsetX = e.offsetX;
+offsetY = e.offsetY;
 };
 
-document.onmousemove=e=>{
-if(!drag) return;
-el.style.left=(e.pageX-offsetX)+"px";
-el.style.top=(e.pageY-offsetY)+"px";
-};
+document.addEventListener("mousemove",function(e){
+if(!isDown) return;
+el.style.left = (e.pageX-offsetX)+"px";
+el.style.top = (e.pageY-offsetY)+"px";
+});
 
-document.onmouseup=()=>{
-if(drag) save();
-drag=false;
-};
+document.addEventListener("mouseup",function(){
+if(isDown) save();
+isDown=false;
+});
 }
 
-bgColor.oninput=()=>{
-document.body.style.background=bgColor.value;
+// фон
+bgColor.oninput = function(){
+document.body.style.background = this.value;
 save();
 };
 
+// сохранить
 function save(){
 localStorage.setItem("canvas",canvas.innerHTML);
 localStorage.setItem("bg",document.body.style.background);
 }
 
-window.onload=()=>{
-const saved=localStorage.getItem("canvas");
-const bg=localStorage.getItem("bg");
+// загрузить
+window.onload = function(){
+const saved = localStorage.getItem("canvas");
+const bg = localStorage.getItem("bg");
 
 if(saved){
-canvas.innerHTML=saved;
-document.querySelectorAll(".draggable").forEach(makeDraggable);
+canvas.innerHTML = saved;
+document.querySelectorAll(".draggable").forEach(drag);
 }
 
 if(bg){
-document.body.style.background=bg;
+document.body.style.background = bg;
 }
 };
 </script>
