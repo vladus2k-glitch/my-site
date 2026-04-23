@@ -3,201 +3,140 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Builder FIX FINAL</title>
+<title>Mini Figma</title>
 
 <style>
 body{
 margin:0;
 font-family:Arial;
+overflow:hidden;
 }
 
-#editBtn{
+#toolbar{
 position:fixed;
 top:10px;
 left:10px;
-padding:8px 12px;
-background:black;
-color:white;
-border:none;
-cursor:pointer;
-display:none;
-z-index:1000;
-}
-
-#panel{
-position:fixed;
-top:0;
-left:0;
-width:220px;
-height:100%;
 background:#111;
+padding:10px;
 color:white;
-padding:15px;
+z-index:1000;
 display:none;
-z-index:999;
 }
 
-#panel button,#panel input{
+button{
+margin:5px 0;
 width:100%;
-margin-bottom:10px;
 }
 
 #canvas{
-min-height:100vh;
+width:100vw;
+height:100vh;
 position:relative;
+background:#f5f5f5;
+overflow:hidden;
 }
 
-/* objects */
-.box{
+.item{
 position:absolute;
 user-select:none;
 }
 
-/* selected */
 .selected{
-outline:2px dashed #4da3ff;
+outline:2px solid #4da3ff;
 }
 
-/* resize handle */
+/* resize handles (Figma style) */
 .handle{
 width:10px;
 height:10px;
 background:#4da3ff;
 position:absolute;
-right:-5px;
-bottom:-5px;
-cursor:se-resize;
 display:none;
 }
+
+.h-tl{top:-5px;left:-5px;cursor:nwse-resize;}
+.h-tr{top:-5px;right:-5px;cursor:nesw-resize;}
+.h-bl{bottom:-5px;left:-5px;cursor:nesw-resize;}
+.h-br{bottom:-5px;right:-5px;cursor:nwse-resize;}
 </style>
 </head>
 
 <body>
 
-<button id="editBtn">Редактор</button>
-
-<div id="panel">
-<button id="addText">Добавить текст</button>
-<input type="file" id="imgUpload">
-<input type="color" id="bgColor">
-<button id="delete">Удалить</button>
+<div id="toolbar">
+<button onclick="addText()">Text</button>
+<button onclick="addBox()">Box</button>
+<button onclick="del()">Delete</button>
 </div>
 
 <div id="canvas"></div>
 
 <script>
-const ADMIN_KEY="123456";
+const ADMIN="123456";
+const isAdmin=new URLSearchParams(location.search).get("admin")===ADMIN;
 
-const params=new URLSearchParams(location.search);
-const isAdmin=params.get("admin")===ADMIN_KEY;
-
-const editBtn=document.getElementById("editBtn");
-const panel=document.getElementById("panel");
 const canvas=document.getElementById("canvas");
-const addText=document.getElementById("addText");
-const imgUpload=document.getElementById("imgUpload");
-const bgColor=document.getElementById("bgColor");
-const del=document.getElementById("delete");
+const toolbar=document.getElementById("toolbar");
 
 let selected=null;
-let editing=false;
 
 if(isAdmin){
-editBtn.style.display="block";
+toolbar.style.display="block";
 }
 
-editBtn.onclick=()=>{
-editing=!editing;
-panel.style.display=editing?"block":"none";
-};
-
-// BLOCK DRAG IF NOT EDITOR
-function canEdit(){
-return editing;
-}
-
-// ADD TEXT
-addText.onclick=()=>{
+// CREATE TEXT
+function addText(){
 const el=document.createElement("div");
-el.className="box";
+el.className="item";
 el.contentEditable=true;
-el.innerText="Текст";
+el.innerText="Text";
 el.style.left="100px";
 el.style.top="100px";
-el.style.width="150px";
-
-addHandle(el);
+el.style.fontSize="20px";
+el.style.width="120px";
 canvas.appendChild(el);
-make(el);
+init(el);
 save();
-};
+}
 
-// ADD IMAGE
-imgUpload.onchange=e=>{
-const file=e.target.files[0];
-if(!file)return;
-
-const reader=new FileReader();
-reader.onload=()=>{
-const el=document.createElement("img");
-el.src=reader.result;
-el.className="box";
+// CREATE BOX
+function addBox(){
+const el=document.createElement("div");
+el.className="item";
 el.style.left="100px";
 el.style.top="100px";
-el.style.width="200px";
-el.style.height="auto";
-el.style.display="block";
-
-addHandle(el);
+el.style.width="120px";
+el.style.height="120px";
+el.style.background="red";
 canvas.appendChild(el);
-make(el);
+init(el);
 save();
-};
-reader.readAsDataURL(file);
-};
+}
 
 // DELETE
-del.onclick=()=>{
+function del(){
 if(selected){
 selected.remove();
 selected=null;
 save();
 }
-};
+}
 
-// BACKGROUND
-bgColor.oninput=()=>{
-document.body.style.background=bgColor.value;
-save();
-};
-
-// SELECT + DRAG
-function make(el){
-
-const handle=el.querySelector(".handle");
+// INIT ELEMENT
+function init(el){
 
 el.onclick=(e)=>{
-if(!editing) return;
+if(!isAdmin) return;
 
-document.querySelectorAll(".box").forEach(b=>{
-b.classList.remove("selected");
-let h=b.querySelector(".handle");
-if(h) h.style.display="none";
-});
-
-selected=el;
-el.classList.add("selected");
-
-if(handle) handle.style.display="block";
-
+select(el);
 e.stopPropagation();
 };
 
-// DRAG ONLY IN EDIT MODE
+// drag
 let down=false,ox,oy;
 
 el.onmousedown=e=>{
-if(!editing) return;
+if(!isAdmin) return;
 if(e.target.classList.contains("handle")) return;
 
 down=true;
@@ -215,68 +154,88 @@ document.addEventListener("mouseup",()=>{
 if(down) save();
 down=false;
 });
-}
 
-// RESIZE FIXED
-function addHandle(el){
+// resize handles
+["tl","tr","bl","br"].forEach(pos=>{
 const h=document.createElement("div");
-h.className="handle";
+h.className="handle h-"+pos;
 el.appendChild(h);
 
 let resizing=false;
 
-h.onmousedown=(e)=>{
-if(!editing) return;
+h.onmousedown=e=>{
+if(!isAdmin) return;
 
 e.stopPropagation();
 resizing=true;
 
 const startX=e.clientX;
 const startY=e.clientY;
-
 const startW=el.offsetWidth;
 const startH=el.offsetHeight;
+const startL=parseInt(el.style.left);
+const startT=parseInt(el.style.top);
 
-document.onmousemove=(ev)=>{
+document.onmousemove=ev=>{
 if(!resizing) return;
 
-const newW=startW+(ev.clientX-startX);
-const newH=startH+(ev.clientY-startY);
+if(pos==="br"){
+el.style.width=startW+(ev.clientX-startX)+"px";
+el.style.height=startH+(ev.clientY-startY)+"px";
+}
 
-if(newW>30) el.style.width=newW+"px";
-if(newH>30) el.style.height=newH+"px";
+if(pos==="bl"){
+el.style.width=startW-(ev.clientX-startX)+"px";
+el.style.height=startH+(ev.clientY-startY)+"px";
+el.style.left=startL+(ev.clientX-startX)+"px";
+}
+
+if(pos==="tr"){
+el.style.width=startW+(ev.clientX-startX)+"px";
+el.style.height=startH-(ev.clientY-startY)+"px";
+el.style.top=startT+(ev.clientY-startY)+"px";
+}
+
+if(pos==="tl"){
+el.style.width=startW-(ev.clientX-startX)+"px";
+el.style.height=startH-(ev.clientY-startY)+"px";
+el.style.left=startL+(ev.clientX-startX)+"px";
+el.style.top=startT+(ev.clientY-startY)+"px";
+}
 };
 
 document.onmouseup=()=>{
-if(resizing) save();
 resizing=false;
 document.onmousemove=null;
+save();
 };
 };
+});
+}
+
+// SELECT
+function select(el){
+document.querySelectorAll(".item").forEach(i=>{
+i.classList.remove("selected");
+i.querySelectorAll(".handle").forEach(h=>h.style.display="none");
+});
+
+selected=el;
+el.classList.add("selected");
+el.querySelectorAll(".handle").forEach(h=>h.style.display="block");
 }
 
 // SAVE
 function save(){
-localStorage.setItem("site",canvas.innerHTML);
-localStorage.setItem("bg",document.body.style.background);
+localStorage.setItem("figma",canvas.innerHTML);
 }
 
 // LOAD
 window.onload=()=>{
-const saved=localStorage.getItem("site");
-const bg=localStorage.getItem("bg");
-
+const saved=localStorage.getItem("figma");
 if(saved){
 canvas.innerHTML=saved;
-
-document.querySelectorAll(".box").forEach(el=>{
-make(el);
-if(!el.querySelector(".handle")) addHandle(el);
-});
-}
-
-if(bg){
-document.body.style.background=bg;
+document.querySelectorAll(".item").forEach(init);
 }
 };
 </script>
