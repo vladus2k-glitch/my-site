@@ -37,7 +37,8 @@ display:none;
 z-index:999;
 }
 
-#panel button,#panel input{
+#panel button,
+#panel input{
 width:100%;
 margin-bottom:10px;
 }
@@ -115,6 +116,7 @@ el.innerText="Текст";
 el.style.left="100px";
 el.style.top="100px";
 el.style.fontSize="20px";
+el.style.width="150px";
 
 addHandle(el);
 canvas.appendChild(el);
@@ -134,6 +136,7 @@ el.className="box";
 el.style.left="100px";
 el.style.top="100px";
 el.style.width="200px";
+el.style.height="auto";
 
 addHandle(el);
 canvas.appendChild(el);
@@ -156,8 +159,8 @@ document.body.style.background=bgColor.value;
 save();
 };
 
+// selection + drag
 function make(el){
-drag(el);
 
 el.onclick=(e)=>{
 document.querySelectorAll(".box").forEach(b=>b.classList.remove("selected"));
@@ -165,10 +168,8 @@ selected=el;
 el.classList.add("selected");
 e.stopPropagation();
 };
-}
 
-// DRAG
-function drag(el){
+// drag
 let down=false,ox,oy;
 
 el.onmousedown=e=>{
@@ -190,29 +191,31 @@ down=false;
 });
 }
 
-// RESIZE
+// RESIZE (FIXED)
 function addHandle(el){
 const h=document.createElement("div");
 h.className="handle";
 el.appendChild(h);
 
-let resizing=false,startX,startY,startW,startH;
+let resizing=false;
 
-h.onmousedown=e=>{
+h.onmousedown=(e)=>{
 e.stopPropagation();
 resizing=true;
 
-startX=e.clientX;
-startY=e.clientY;
+const startX=e.clientX;
+const startY=e.clientY;
+const startW=el.offsetWidth;
+const startH=el.offsetHeight;
 
-startW=parseInt(getComputedStyle(el).width);
-startH=parseInt(getComputedStyle(el).height);
-
-document.onmousemove=ev=>{
+document.onmousemove=(ev)=>{
 if(!resizing) return;
 
-el.style.width=(startW + (ev.clientX-startX))+"px";
-el.style.height=(startH + (ev.clientY-startY))+"px";
+const newW=startW+(ev.clientX-startX);
+const newH=startH+(ev.clientY-startY);
+
+if(newW>30) el.style.width=newW+"px";
+if(newH>30) el.style.height=newH+"px";
 };
 
 document.onmouseup=()=>{
@@ -238,9 +241,7 @@ if(saved){
 canvas.innerHTML=saved;
 document.querySelectorAll(".box").forEach(el=>{
 make(el);
-const h=document.createElement("div");
-h.className="handle";
-el.appendChild(h);
+if(!el.querySelector(".handle")) addHandle(el);
 });
 }
 
