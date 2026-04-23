@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini Figma + Layers</title>
+<title>Mini Figma FIX</title>
 
 <style>
 body{
@@ -12,7 +12,7 @@ font-family:Arial;
 overflow:hidden;
 }
 
-/* LEFT LAYERS PANEL */
+/* LEFT LAYERS */
 #layers{
 position:fixed;
 left:0;
@@ -49,7 +49,7 @@ display:none;
 z-index:1000;
 }
 
-button{
+button, input{
 width:100%;
 margin:5px 0;
 }
@@ -73,7 +73,7 @@ user-select:none;
 outline:2px solid #4da3ff;
 }
 
-/* resize handles */
+/* resize */
 .handle{
 width:10px;
 height:10px;
@@ -93,9 +93,10 @@ display:none;
 <div id="layers"></div>
 
 <div id="toolbar">
-<button onclick="addText()">Text</button>
-<button onclick="addBox()">Box</button>
-<button onclick="del()">Delete</button>
+<button onclick="addText()">Добавить текст</button>
+<input type="file" id="imgUpload">
+<button onclick="addBox()">Добавить блок</button>
+<button onclick="del()">Удалить</button>
 </div>
 
 <div id="canvas"></div>
@@ -107,6 +108,7 @@ const isAdmin=new URLSearchParams(location.search).get("admin")===ADMIN;
 const canvas=document.getElementById("canvas");
 const layers=document.getElementById("layers");
 const toolbar=document.getElementById("toolbar");
+const imgUpload=document.getElementById("imgUpload");
 
 let selected=null;
 
@@ -114,30 +116,62 @@ if(isAdmin){
 toolbar.style.display="block";
 }
 
-/* ADD TEXT */
+/* TEXT */
 function addText(){
 const el=createItem("Text");
 el.contentEditable=true;
 el.innerText="Text";
 el.style.width="120px";
 el.style.height="50px";
+
 canvas.appendChild(el);
 init(el);
 updateLayers();
 save();
 }
 
-/* ADD BOX */
+/* BOX */
 function addBox(){
 const el=createItem("Box");
-el.style.background="red";
 el.style.width="120px";
 el.style.height="120px";
+el.style.background="red";
+
 canvas.appendChild(el);
 init(el);
 updateLayers();
 save();
 }
+
+/* IMAGE */
+imgUpload.onchange=e=>{
+const file=e.target.files[0];
+if(!file)return;
+
+const reader=new FileReader();
+reader.onload=()=>{
+
+const el=createItem("Image");
+
+const img=document.createElement("img");
+img.src=reader.result;
+img.style.width="100%";
+img.style.height="100%";
+img.style.objectFit="cover";
+
+el.style.width="200px";
+el.style.height="150px";
+
+el.appendChild(img);
+
+canvas.appendChild(el);
+init(el);
+updateLayers();
+save();
+};
+
+reader.readAsDataURL(file);
+};
 
 /* CREATE ITEM */
 function createItem(name){
@@ -168,6 +202,7 @@ select(el);
 e.stopPropagation();
 };
 
+/* drag */
 let down=false,ox,oy;
 
 el.onmousedown=e=>{
@@ -225,6 +260,7 @@ if(el===selected) div.classList.add("active");
 div.onclick=()=>{
 select(el);
 };
+
 layers.appendChild(div);
 });
 }
@@ -240,6 +276,7 @@ let resizing=false;
 
 h.onmousedown=e=>{
 if(!isAdmin) return;
+
 e.stopPropagation();
 resizing=true;
 
